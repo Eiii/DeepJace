@@ -39,20 +39,23 @@ def main():
     model.load_weights("mtgW2V.mdl")
     embedding_weights = model.layers[0].get_weights()[0]
     
-    embedding_dict = tokenizer.word_index
-    for word in embedding_dict:
-        weights = embedding_weights[embedding_dict[word]]
-        print word
-        print weights.shape
-        print [str(weight) for weight in weights]
-        print np.array_str(weights)
-        print word,
-        for weight in weights:
-            print weight,
-        print
     from scipy.spatial.distance import cosine
+    embedding_dict = tokenizer.word_index
+    top5 = []
+    for word1 in embedding_dict:
+        print word1
+        top5 = [] 
+        bottom5 = []
+        scores = []
+        for word2 in embedding_dict:
+            score = 1 - cosine(embedding_weights[embedding_dict[word1]], embedding_weights[embedding_dict[word2]])
+            if score > min(top5):
+                top5.append(word2)
+            if score < max(bottom5):
+                bottom5.append(word2)
+        
     
-    print len(embedding_weights[0])
+    
     while True:
         try:
                 word1 = raw_input("What is the first word you want to compare?")
