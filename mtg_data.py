@@ -29,7 +29,6 @@ def load_card_data(test_pct=0.1, data_pct=1, seed=1337):
       c = convert_json_card(j)
       card_data.append(c)
     except Exception as e:
-      print e
       error_cards += 1
   print len(card_data), error_cards
   random.shuffle(card_data)
@@ -50,7 +49,7 @@ def convert_json_card(json):
 
 
 def convert_types(card_types):
-  ct_vec = np.zeros(7)
+  ct_vec = np.zeros(8)
   for ct in card_types:
     ct = ct.lower()
     if ct == "creature":
