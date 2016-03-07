@@ -9,7 +9,7 @@ CARD_DATA = 'data/AllCards.json'
 SET_DATA = 'data/AllSets.json'
 WHITE, BLUE, BLACK, RED, GREEN, COLORLESS = range(6)
 
-Card = namedtuple('Card', ['name', 'cost', 'text'])
+Card = namedtuple('Card', ['name', 'cost', 'text', 'types'])
 
 """
 load_card_data
@@ -28,7 +28,8 @@ def load_card_data(test_pct=0.1, data_pct=1, seed=1337):
     try:
       c = convert_json_card(j)
       card_data.append(c)
-    except:
+    except Exception as e:
+      print e
       error_cards += 1
   print len(card_data), error_cards
   random.shuffle(card_data)
@@ -44,7 +45,34 @@ def convert_json_card(json):
   name = json['name']
   cost = convert_cost(json.get('manaCost', ''))
   text = convert_text(json.get('text', ''), name)
-  return Card(name, cost, text)
+  card_types = convert_types(json.get('types', ''))
+  return Card(name, cost, text, card_types, rarity)
+
+
+def convert_types(card_types):
+  ct_vec = np.zeros(7)
+  for ct in card_types:
+    ct = ct.lower()
+    if ct == "creature":
+      ct_vec[0] = 1
+    elif ct == "enchantment" or ct == "enchant":
+      ct_vec[1] = 1
+    elif ct == "planeswalker":
+      ct_vec[2] = 1
+    elif ct == "sorcery":
+      ct_vec[3] = 1
+    elif ct == "instant":
+      ct_vec[4] = 1
+    elif ct == "artifact":
+      ct_vec[5] = 1
+    elif ct == "land":
+      ct_vec[6] = 1
+    elif ct == "tribal":
+      ct_vec[7] = 1
+    else:
+      raise Exception("Bad card type")
+  return ct_vec
+
 
 def convert_text(text, name):
   #Replace all occurances of name with %
