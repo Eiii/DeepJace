@@ -46,7 +46,7 @@ def convert_json_card(json):
   cost = convert_cost(json.get('manaCost', ''))
   text = convert_text(json.get('text', ''), name)
   card_types = convert_types(json.get('types', ''))
-  return Card(name, cost, text, card_types, rarity)
+  return Card(name, cost, text, card_types)
 
 
 def convert_types(card_types):
