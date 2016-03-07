@@ -3,7 +3,6 @@ from keras.preprocessing.sequence import skipgrams, make_sampling_table
 from keras.layers.core import TimeDistributedDense,Dense, Dropout, Activation
 from keras.layers.embeddings import  Embedding
 from keras.layers.recurrent import SimpleRNN
-from keras.preprocessing.text import Tokenizer
 from keras.models import Sequential
 import numpy as np
 
@@ -11,7 +10,7 @@ def main():
     vocabulary_size = 10000
     #keep commas and colons
     corpus = [line.strip().lower().replace("(", "").replace(")", "").replace(".", "").split() for line in open('corpus.txt', 'r')]
-    tokenizer = MyTokenizer(nb_words=vocabulary_size, filters=None, lower=True, split=" ")
+    tokenizer = MTGTokenizer(nb_words=vocabulary_size, filters=None, lower=True, split=" ")
     tokenizer.fit_on_texts(corpus)
     tokens = tokenizer.texts_to_sequences(corpus)
 
@@ -34,7 +33,6 @@ def main():
     model.add(Embedding(vocabulary_size+1, 256))
     model.add(SimpleRNN(128, return_sequences=False))
     model.add(Dense(1, activation="sigmoid"))
-
     model.compile(optimizer="Adam", loss="binary_crossentropy")
     model.load_weights("mtgW2V.mdl")
     embedding_weights = model.layers[0].get_weights()[0]
@@ -74,10 +72,10 @@ def main():
 
 #    model.save_weights("mtgW2V.mdl")
     
-
-class MyTokenizer(Tokenizer):
+from keras.preprocessing.text import Tokenizer
+class MTGTokenizer(Tokenizer):
     def __init__(self, *args, **kwargs):
-        super(MyTokenizer, self).__init__(*args, **kwargs)
+        super(MTGTokenizer, self).__init__(*args, **kwargs)
 
     def fit_on_texts(self, texts):
         self.document_count = 0
