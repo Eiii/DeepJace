@@ -9,7 +9,7 @@ CARD_DATA = 'data/AllCards.json'
 SET_DATA = 'data/AllSets.json'
 WHITE, BLUE, BLACK, RED, GREEN, COLORLESS = range(6)
 
-Card = namedtuple('Card', ['name', 'cost', 'text', 'types'])
+Card = namedtuple('Card', ['name', 'cost', 'text', 'types', 'power', 'toughness', 'loyalty', 'colors'])
 
 """
 load_card_data
@@ -17,6 +17,8 @@ Generates a train and test data set.
 Only loads `data_pct` percent of the total data set.
 The test data set will be `test_pct` percent of all the data loaded.
 Returns [training data], [testing data]
+
+X - cost spells do not function. * cost power/toughness creatures do not function.
 """
 def load_card_data(test_pct=0.1, data_pct=1, seed=1337):
   random.seed(seed)
@@ -44,9 +46,45 @@ def convert_json_card(json):
   name = json['name']
   cost = convert_cost(json.get('manaCost', ''))
   text = convert_text(json.get('text', ''), name)
+  try:
+    colors = convert_colors(json.get('colors', ''))
+  except Exception:
+    colors = convert_colors('colorless')
   card_types = convert_types(json.get('types', ''))
-  return Card(name, cost, text, card_types)
+  if card_types[0]:
+    power = convert_numeric(json.get('power'))
+    toughness = convert_numeric(json.get('power'))
+  else:
+    power, toughness = 0,0
+  if card_types[2]:
+    loyalty = convert_numeric(json.get('loyalty'))
+  else:
+    loyalty = 0
+  return Card(name, cost, text, card_types, power, toughness, loyalty, colors)
 
+def convert_colors(colors):
+    
+  has_colors = np.zeros(6)
+  if colors == 'colorless':
+    has_colors[COLORLESS] = 1
+    return has_colors
+  for color in colors:
+    if sym == "White":
+      has_colors[WHITE] = 1
+    elif sym == "Blue":
+      has_colors[BLUE] = 1
+    elif sym == "Black":
+      has_colors[BLACK] = 1
+    elif sym == "Red":
+      has_colors[RED] = 1
+    elif sym == "Green":
+      has_colors[GREEN] = 1
+    else:
+      raise LookupError()
+  return has_colors
+
+def convert_numeric(val):
+  return int(val)
 
 def convert_types(card_types):
   ct_vec = np.zeros(8)
