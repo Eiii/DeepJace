@@ -42,6 +42,7 @@ for line in open(sys.argv[1], 'r'):
     
     if colors_correct:
         score += .33
+    
     "correct cmc"
     if sum(predicted) == sum(real):
         score += .34
