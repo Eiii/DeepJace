@@ -186,7 +186,7 @@ def make_predictions(X_test_text, X_test_other, y_test):
 
     results = model.predict([X_test_text, X_test_other])
     for result, correct, x_test in zip(results, y_test, X_test_other):
-        print ",".join([str(r) for r in result]) + "\t" + ",".join([str(r) for r in correct]) + "\t" + ",".join([str(val) for val in x_test[-6:]])
+        print ",".join([str(r) for r in result]) + "\t" + ",".join([str(r) for r in correct])
     
     
 

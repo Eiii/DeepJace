@@ -46,10 +46,7 @@ def convert_json_card(json):
   name = json['name']
   cost = convert_cost(json.get('manaCost', ''))
   text = convert_text(json.get('text', ''), name)
-  try:
-    colors = convert_colors(json.get('colors', ''))
-  except Exception:
-    colors = convert_colors('colorless')
+  colors = convert_colors(json.get('colors', ''))
   card_types = convert_types(json.get('types', ''))
   if card_types[0]:
     power = convert_numeric(json.get('power'))
@@ -65,22 +62,17 @@ def convert_json_card(json):
 def convert_colors(colors):
     
   has_colors = np.zeros(6)
-  if colors == 'colorless':
-    has_colors[COLORLESS] = 1
-    return has_colors
   for color in colors:
-    if sym == "White":
+    if color == "White":
       has_colors[WHITE] = 1
-    elif sym == "Blue":
+    elif color == "Blue":
       has_colors[BLUE] = 1
-    elif sym == "Black":
+    elif color == "Black":
       has_colors[BLACK] = 1
-    elif sym == "Red":
+    elif color == "Red":
       has_colors[RED] = 1
-    elif sym == "Green":
+    elif color == "Green":
       has_colors[GREEN] = 1
-    else:
-      raise LookupError()
   return has_colors
 
 def convert_numeric(val):
