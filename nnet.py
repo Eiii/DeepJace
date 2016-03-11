@@ -92,7 +92,7 @@ def make_predictions(X_test, y_test, y_names):
   print "Predicting..."
   results = model.predict(X_test)
   for result, correct, x_test, y_name in zip(results, y_test, X_test[1], y_names):
-      print mana_str(result), "\t", mana_str(correct), "\t", y_name
+      print mana_str(result), "\t", mana_str(correct), "\t", y_name.encode('utf-8').strip()
 
 def mana_str(cost):
   cost = round_cost(cost)
