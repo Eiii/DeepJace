@@ -79,7 +79,7 @@ def lstm_mlp(X_train, y_train, X_test, y_test):
   print "Compiling..."
   model.compile(loss='msle', optimizer='adam')
   print "Fitting..."
-  model.fit(X_train, y_train, batch_size=128, nb_epoch=1, validation_split = .1, show_accuracy=True)
+  model.fit(X_train, y_train, batch_size=128, nb_epoch=50, validation_split = .1, show_accuracy=True)
   model.save_weights("weights_1.model", overwrite=True)
 
 def make_predictions(X_test, y_test, y_names):
@@ -92,7 +92,6 @@ def make_predictions(X_test, y_test, y_names):
   print "Predicting..."
   results = model.predict(X_test)
   for result, correct, x_test, y_name in zip(results, y_test, X_test[1], y_names):
-      #print ",".join([str(r) for r in result]) + "\t" + ",".join([str(r) for r in correct])
       print mana_str(result), "\t", mana_str(correct), "\t", y_name
 
 def mana_str(cost):
@@ -112,7 +111,7 @@ def round_cost(cost):
 def main():
   train, test = load_card_data()
   X_train, y_train, X_test, y_test, y_test_names = prepare_lstm(train, test)
-  #lstm_mlp(X_train, y_train, X_test, y_test)
+  lstm_mlp(X_train, y_train, X_test, y_test)
   make_predictions(X_test, y_test, y_test_names)
 
 if __name__=='__main__':
