@@ -4,40 +4,51 @@ from w2v_mtg import MTGTokenizer
 import numpy as np
 from keras.models import Graph, Sequential
 from keras.layers import Dense, Dropout, Activation
-from keras.layers.core import Merge
+from keras.layers.core import Merge, Flatten
 from keras.layers.embeddings import Embedding
 from keras.layers.recurrent import LSTM
 from keras.preprocessing import sequence
 from keras.preprocessing.text import Tokenizer
 from scipy.sparse import csc_matrix
 from sklearn.preprocessing import OneHotEncoder
+import theano
+import theano.tensor as T
 
-VOCAB_SIZE = 2000
+VOCAB_SIZE = 3000
 MAX_LEN = 75
-
 DROPOUT = 0.5
 
 def build_language_model():
   model = Sequential()
-  model.add(Embedding(VOCAB_SIZE+1, 256, mask_zero=True, input_length=MAX_LEN)) #vocab, size
-  model.add(LSTM(256))
-  model.add(Dropout(.5))
+  model.add(Embedding(VOCAB_SIZE+1, 1024, mask_zero=True, input_length=MAX_LEN)) #vocab, size
+  model.add(LSTM(512))
+  model.add(Flatten())
+  model.add(Dropout(DROPOUT))
   return model
 
 def build_numeric_model(input_shape):
   model = Sequential()
-  model.add(Dense(256, input_shape=input_shape, activation='relu'))
-  model.add(Dropout(.5))
+  model.add(Dense(512, input_shape=input_shape, activation='relu'))
+  model.add(Dropout(DROPOUT))
   return model
 
-def build_full_model(input_shape):
-  language_model = build_language_model()
+def build_full_model(input_shape, pretrain_language=None):
+  if pretrain_language is None:
+    language_model = build_language_model()
+  else:
+    language_model = pretrain_language
+    language_model.layers.pop()
   numeric_model = build_numeric_model(input_shape)
   model = Sequential()
   model.add(Merge([language_model, numeric_model], mode='concat', concat_axis=-1))
-  model.add(Dense(256, activation = 'relu'))
-  model.add(Dropout(.5))
+  model.add(Dense(1024, activation='relu'))
+  model.add(Dropout(DROPOUT))
   model.add(Dense(6, activation='relu'))
+  return model
+
+def build_pretrain_model():
+  model = build_language_model()
+  model.add(Dense(1, activation='relu'))
   return model
 
 def prepare_lstm(train, test):
@@ -74,14 +85,30 @@ def prepare_lstm(train, test):
   X_test = map(np.asarray, [X_test_text, X_test_numeric])
   return X_train, np.asarray(y_train), X_test, np.asarray(y_test), y_test_names
 
-def lstm_mlp(X_train, y_train, X_test, y_test):
+def lstm_mlp(X_train, y_train, X_test, y_test, pretrain=None):
   print "lstm_mlp"
-  model = build_full_model(X_train[1][0].shape)
+  model = build_full_model(X_train[1][0].shape, pretrain)
   print "Compiling..."
   model.compile(loss='msle', optimizer='adam')
   print "Fitting..."
-  model.fit(X_train, y_train, batch_size=128, nb_epoch=50, validation_split = .1, show_accuracy=True)
+  model.fit(X_train, y_train, batch_size=256, nb_epoch=100, validation_split=.1, show_accuracy=True)
   model.save_weights("weights_1.model", overwrite=True)
+
+def lstm_pretrain(X_train, y_train):
+  print "lstm_pretrain"
+  y_train_sum = np.sum(y_train, axis=1)
+  y_test_sum = np.sum(y_train, axis=1)
+  model = build_pretrain_model()
+  print "Compiling..."
+  model.compile(loss='msle', optimizer='adam')
+  model.fit(X_train, y_train_sum, batch_size=256, nb_epoch=100, validation_split=0.1)
+  model.save_weights("pretrain_1.model", overwrite=True)
+  return model
+
+def load_pretrain():
+  model = build_pretrain_model()
+  model.load_weights("pretrain_1.model")
+  return model
 
 def make_predictions(X_test, y_test, y_names):
   print "make_predictions"
@@ -114,7 +141,9 @@ def round_cost(cost):
 def main():
   train, test = load_card_data()
   X_train, y_train, X_test, y_test, y_test_names = prepare_lstm(train, test)
-  lstm_mlp(X_train, y_train, X_test, y_test)
+  pretrain = lstm_pretrain(X_train[0], y_train)
+  #pretrain = load_pretrain()
+  lstm_mlp(X_train, y_train, X_test, y_test, pretrain)
   return make_predictions(X_test, y_test, y_test_names)
 
 model = main()
