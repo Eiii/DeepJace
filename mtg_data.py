@@ -32,7 +32,6 @@ def load_card_data(test_pct=0.1, data_pct=1, seed=1337):
       card_data.append(c)
     except Exception as e:
       error_cards += 1
-  print len(card_data), error_cards
   random.shuffle(card_data)
   if data_pct < 1:
     amt = int(len(card_data)*data_pct)
