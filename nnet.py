@@ -14,7 +14,7 @@ from sklearn.preprocessing import OneHotEncoder
 import theano
 import theano.tensor as T
 
-VOCAB_SIZE = 3000
+VOCAB_SIZE = 2000
 MAX_LEN = 75
 DROPOUT = 0.5
 
@@ -28,7 +28,7 @@ def build_language_model():
 
 def build_numeric_model(input_shape):
   model = Sequential()
-  model.add(Dense(512, input_shape=input_shape, activation='relu'))
+  model.add(Dense(256, input_shape=input_shape, activation='relu'))
   model.add(Dropout(DROPOUT))
   return model
 
@@ -41,7 +41,9 @@ def build_full_model(input_shape, pretrain_language=None):
   numeric_model = build_numeric_model(input_shape)
   model = Sequential()
   model.add(Merge([language_model, numeric_model], mode='concat', concat_axis=-1))
-  model.add(Dense(1024, activation='relu'))
+  model.add(Dense(512, activation='sigmoid'))
+  model.add(Dropout(DROPOUT))
+  model.add(Dense(512, activation='relu'))
   model.add(Dropout(DROPOUT))
   model.add(Dense(6, activation='relu'))
   return model
@@ -51,7 +53,7 @@ def build_pretrain_model():
   model.add(Dense(1, activation='relu'))
   return model
 
-def prepare_lstm(train, test):
+def prepare_lstm(train, test, filter_fn=None):
   def prepare_numeric(data):
     X = []
     y = []
@@ -73,6 +75,10 @@ def prepare_lstm(train, test):
     corpus = [t[2] for t in data]
     tokenizer.fit_on_texts(corpus)
     return tokenizer
+
+  if filter_fn:
+    train = filter(filter_fn, train)
+    test = filter(filter_fn, test)
 
   tokenizer = create_trained_tokenizer(train)
   X_train_text = prepare_text(train, tokenizer)
@@ -138,12 +144,26 @@ def mana_str(cost):
 def round_cost(cost):
   return map(int,map(round, cost))
 
+def filter_data(X, y, filter_fn):
+    X_out = []
+    y_out = []
+    for xi, yi in zip(X, y):
+        print xi
+        print yi
+        if filter_fn(xi):
+            X_out.append(xi)
+            y_out.append(yi)
+    return X_out, y_out
+
 def main():
   train, test = load_card_data()
-  X_train, y_train, X_test, y_test, y_test_names = prepare_lstm(train, test)
-  pretrain = lstm_pretrain(X_train[0], y_train)
+  remove_creatures = lambda x: x.types[0] == 0
+  X_pretrain, y_pretrain, _, _, _ = prepare_lstm(train, test, remove_creatures)
+  pretrain = lstm_pretrain(X_pretrain[0], y_pretrain)
   #pretrain = load_pretrain()
+  X_train, y_train, X_test, y_test, y_test_names = prepare_lstm(train, test)
   lstm_mlp(X_train, y_train, X_test, y_test, pretrain)
-  return make_predictions(X_test, y_test, y_test_names)
+  make_predictions(X_test, y_test, y_test_names)
 
-model = main()
+if __name__=="__main__":
+    main()
