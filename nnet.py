@@ -12,34 +12,35 @@ from keras.preprocessing.text import Tokenizer
 from scipy.sparse import csc_matrix
 from sklearn.preprocessing import OneHotEncoder
 
+VOCAB_SIZE = 2000
+MAX_LEN = 75
+
+DROPOUT = 0.5
+
 def build_language_model():
   model = Sequential()
-  model.add(Embedding(2001, 256, mask_zero=True, input_length=75)) #vocab, size
+  model.add(Embedding(VOCAB_SIZE+1, 256, mask_zero=True, input_length=MAX_LEN)) #vocab, size
   model.add(LSTM(256))
   model.add(Dropout(.5))
-  #model.add(Dense(128, activation='relu')) 
-  #model.add(Dropout(.5))
   return model
 
 def build_numeric_model(input_shape):
   model = Sequential()
   model.add(Dense(256, input_shape=input_shape, activation='relu'))
   model.add(Dropout(.5))
-  model.add(Dense(256, activation = 'relu'))
-  model.add(Dropout(.5))
   return model
 
 def build_full_model(input_shape):
-  print "Building model with shape %s" % input_shape
   language_model = build_language_model()
   numeric_model = build_numeric_model(input_shape)
   model = Sequential()
   model.add(Merge([language_model, numeric_model], mode='concat', concat_axis=-1))
+  model.add(Dense(256, activation = 'relu'))
   model.add(Dropout(.5))
   model.add(Dense(6, activation='relu'))
   return model
 
-def prepare_lstm(train, test, vocabulary_size=2000, max_len=75):
+def prepare_lstm(train, test):
   def prepare_numeric(data):
     X = []
     y = []
@@ -53,11 +54,11 @@ def prepare_lstm(train, test, vocabulary_size=2000, max_len=75):
   def prepare_text(data, tokenizer):
     corpus = [t[2] for t in data]
     tokens = tokenizer.texts_to_sequences(corpus)
-    text = sequence.pad_sequences(tokens, maxlen=max_len)
+    text = sequence.pad_sequences(tokens, maxlen=MAX_LEN)
     return text
 
   def create_trained_tokenizer(data):
-    tokenizer = MTGTokenizer(nb_words=vocabulary_size, filters=None, lower=True, split=" ")
+    tokenizer = MTGTokenizer(nb_words=VOCAB_SIZE, filters=None, lower=True, split=" ")
     corpus = [t[2] for t in data]
     tokenizer.fit_on_texts(corpus)
     return tokenizer
@@ -91,8 +92,10 @@ def make_predictions(X_test, y_test, y_names):
 
   print "Predicting..."
   results = model.predict(X_test)
-  for result, correct, x_test, y_name in zip(results, y_test, X_test[1], y_names):
-      print mana_str(result), "\t", mana_str(correct), "\t", y_name.encode('utf-8').strip()
+  with open("output.txt",'w') as f:
+    for result, correct, x_test, y_name in zip(results, y_test, X_test[1], y_names):
+        print >> f, mana_str(result), "\t", mana_str(correct), "\t", y_name.encode('utf-8').strip()
+  return model
 
 def mana_str(cost):
   cost = round_cost(cost)
@@ -112,7 +115,6 @@ def main():
   train, test = load_card_data()
   X_train, y_train, X_test, y_test, y_test_names = prepare_lstm(train, test)
   lstm_mlp(X_train, y_train, X_test, y_test)
-  make_predictions(X_test, y_test, y_test_names)
+  return make_predictions(X_test, y_test, y_test_names)
 
-if __name__=='__main__':
-  main()
+model = main()
