@@ -41,7 +41,7 @@ def load_card_data(test_pct=0.1, data_pct=1, seed=1337):
   train_data = card_data[test_amt:]
   return train_data, test_data
 
-def load_set_data(test_pct=0.1, data_pct=1, seed=1337, before=None, after=None):
+def load_set_data(test_pct=0.1, data_pct=1, seed=1337, before=None, after=None, ignore=None):
   random.seed(seed)
   with open(SET_DATA) as f:
     json_data = json.load(f)
@@ -58,6 +58,8 @@ def load_set_data(test_pct=0.1, data_pct=1, seed=1337, before=None, after=None):
   error_cards = 0
   for set_name in json_data.keys():
     if set_name not in legal_sets:
+      continue
+    if ignore is not None and set_name in ignore:
       continue
     for j in json_data[set_name]['cards']:
       try:
