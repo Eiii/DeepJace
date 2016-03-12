@@ -9,7 +9,7 @@ CARD_DATA = 'data/AllCards.json'
 SET_DATA = 'data/AllSets.json'
 WHITE, BLUE, BLACK, RED, GREEN, COLORLESS = range(6)
 
-Card = namedtuple('Card', ['name', 'cost', 'text', 'types', 'power', 'toughness', 'loyalty', 'colors'])
+Card = namedtuple('Card', ['name', 'cost', 'text', 'types', 'power', 'toughness', 'loyalty', 'colors', 'set'])
 
 """
 load_card_data
@@ -41,7 +41,41 @@ def load_card_data(test_pct=0.1, data_pct=1, seed=1337):
   train_data = card_data[test_amt:]
   return train_data, test_data
 
-def convert_json_card(json):
+def load_set_data(test_pct=0.1, data_pct=1, seed=1337, before=None, after=None):
+  random.seed(seed)
+  with open(SET_DATA) as f:
+    json_data = json.load(f)
+
+  set_order = order_sets(json_data)
+  if before:
+    legal_sets = sets_before(set_order, before)
+  elif after:
+    legal_sets = sets_after(set_order, after)
+  else:
+    legal_sets = json_data.keys()
+
+  card_data = []
+  error_cards = 0
+  for set_name in json_data.keys():
+    if set_name not in legal_sets:
+      continue
+    for j in json_data[set_name]['cards']:
+      try:
+        c = convert_json_card(j, set_name)
+        card_data.append(c)
+      except Exception as e:
+        error_cards += 1
+
+  random.shuffle(card_data)
+  if data_pct < 1:
+    amt = int(len(card_data)*data_pct)
+    card_data = card_data[:max(amt, 1)]
+  test_amt = int(len(card_data)*test_pct)
+  test_data = card_data[:test_amt]
+  train_data = card_data[test_amt:]
+  return train_data, test_data
+
+def convert_json_card(json, set_name=None):
   name = json['name']
   cost = convert_cost(json.get('manaCost', ''))
   text = convert_text(json.get('text', ''), name)
@@ -56,7 +90,7 @@ def convert_json_card(json):
     loyalty = convert_numeric(json.get('loyalty'))
   else:
     loyalty = 0
-  return Card(name, cost, text, card_types, power, toughness, loyalty, colors)
+  return Card(name, cost, text, card_types, power, toughness, loyalty, colors, set_name)
 
 def convert_colors(colors):
     
@@ -136,3 +170,22 @@ def mana_symbols(cost):
     end = cost.find('}',idx)
     yield cost[idx+1:end]
     idx = cost.find('{',end)
+
+def order_sets(data):
+  from time import strptime
+  set_list = []
+  for set_name in data.keys():
+    date_str = data[set_name]['releaseDate']
+    date = strptime(date_str, '%Y-%m-%d')
+    set_list.append((set_name, date))
+  set_list.sort(key=lambda x: x[1])
+  return map(lambda x: x[0], set_list)
+
+def sets_before(set_order, set_name):
+  idx = set_order.index(set_name)
+  return set_order[:idx+1]
+
+def sets_after(set_order, set_name):
+  idx = set_order.index(set_name)
+  return set_order[idx:]
+
