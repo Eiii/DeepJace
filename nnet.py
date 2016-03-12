@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from mtg_data import load_card_data
+from mtg_data import load_card_data, load_set_data
 from w2v_mtg import MTGTokenizer
 import numpy as np
 from keras.models import Graph, Sequential
@@ -15,20 +15,19 @@ import theano
 import theano.tensor as T
 
 VOCAB_SIZE = 2000
-MAX_LEN = 75
-DROPOUT = 0.5
+MAX_LEN = 40
+DROPOUT = 0.7
 
 def build_language_model():
   model = Sequential()
-  model.add(Embedding(VOCAB_SIZE+1, 1024, mask_zero=True, input_length=MAX_LEN)) #vocab, size
-  model.add(LSTM(512))
-  model.add(Flatten())
+  model.add(Embedding(VOCAB_SIZE+1, 512, mask_zero=True, input_length=MAX_LEN)) #vocab, size
+  model.add(LSTM(64))
   model.add(Dropout(DROPOUT))
   return model
 
 def build_numeric_model(input_shape):
   model = Sequential()
-  model.add(Dense(256, input_shape=input_shape, activation='relu'))
+  model.add(Dense(64, input_shape=input_shape, activation='relu'))
   model.add(Dropout(DROPOUT))
   return model
 
@@ -41,9 +40,7 @@ def build_full_model(input_shape, pretrain_language=None):
   numeric_model = build_numeric_model(input_shape)
   model = Sequential()
   model.add(Merge([language_model, numeric_model], mode='concat', concat_axis=-1))
-  model.add(Dense(512, activation='sigmoid'))
-  model.add(Dropout(DROPOUT))
-  model.add(Dense(512, activation='relu'))
+  model.add(Dense(128, activation='relu'))
   model.add(Dropout(DROPOUT))
   model.add(Dense(6, activation='relu'))
   return model
@@ -97,7 +94,7 @@ def lstm_mlp(X_train, y_train, X_test, y_test, pretrain=None):
   print "Compiling..."
   model.compile(loss='msle', optimizer='adam')
   print "Fitting..."
-  model.fit(X_train, y_train, batch_size=256, nb_epoch=100, validation_split=.1, show_accuracy=True)
+  model.fit(X_train, y_train, batch_size=256, nb_epoch=250, validation_split=.1)
   model.save_weights("weights_1.model", overwrite=True)
 
 def lstm_pretrain(X_train, y_train):
@@ -107,7 +104,7 @@ def lstm_pretrain(X_train, y_train):
   model = build_pretrain_model()
   print "Compiling..."
   model.compile(loss='msle', optimizer='adam')
-  model.fit(X_train, y_train_sum, batch_size=256, nb_epoch=100, validation_split=0.1)
+  model.fit(X_train, y_train_sum, batch_size=256, nb_epoch=50, validation_split=0.1)
   model.save_weights("pretrain_1.model", overwrite=True)
   return model
 
@@ -156,13 +153,13 @@ def filter_data(X, y, filter_fn):
     return X_out, y_out
 
 def main():
-  train, test = load_card_data()
+  train, test = load_set_data(after='RAV', ignore=['PLC', 'FUT'])
   remove_creatures = lambda x: x.types[0] == 0
-  X_pretrain, y_pretrain, _, _, _ = prepare_lstm(train, test, remove_creatures)
-  pretrain = lstm_pretrain(X_pretrain[0], y_pretrain)
+  #X_pretrain, y_pretrain, _, _, _ = prepare_lstm(train, test, remove_creatures)
+  #pretrain = lstm_pretrain(X_pretrain[0], y_pretrain)
   #pretrain = load_pretrain()
   X_train, y_train, X_test, y_test, y_test_names = prepare_lstm(train, test)
-  lstm_mlp(X_train, y_train, X_test, y_test, pretrain)
+  lstm_mlp(X_train, y_train, X_test, y_test)
   make_predictions(X_test, y_test, y_test_names)
 
 if __name__=="__main__":
