@@ -92,7 +92,7 @@ def lstm_mlp(X_train, y_train, X_test, y_test, pretrain=None):
   print "lstm_mlp"
   model = build_full_model(X_train[1][0].shape, pretrain)
   print "Compiling..."
-  model.compile(loss='msle', optimizer='adam')
+  model.compile(loss=custom_loss, optimizer='adam')
   print "Fitting..."
   model.fit(X_train, y_train, batch_size=256, nb_epoch=250, validation_split=.1)
   model.save_weights("weights_1.model", overwrite=True)
@@ -103,7 +103,7 @@ def lstm_pretrain(X_train, y_train):
   y_test_sum = np.sum(y_train, axis=1)
   model = build_pretrain_model()
   print "Compiling..."
-  model.compile(loss='msle', optimizer='adam')
+  model.compile(loss=custom_loss, optimizer='adam')
   model.fit(X_train, y_train_sum, batch_size=256, nb_epoch=50, validation_split=0.1)
   model.save_weights("pretrain_1.model", overwrite=True)
   return model
@@ -117,7 +117,7 @@ def make_predictions(X_test, y_test, y_names):
   print "make_predictions"
   model = build_full_model(X_test[1][0].shape)
   print "Compiling..."
-  model.compile(loss='msle', optimizer='adam')
+  model.compile(loss=custom_loss, optimizer='adam')
   model.load_weights("weights_1.model")
 
   print "Predicting..."
@@ -151,6 +151,14 @@ def filter_data(X, y, filter_fn):
             X_out.append(xi)
             y_out.append(yi)
     return X_out, y_out
+
+def custom_loss(y_true, y_pred):
+  epsilon = 0.001
+  first_log = T.log(T.clip(y_pred, 0.001, np.inf) + 1.)
+  second_log = T.log(T.clip(y_true, 0.001, np.inf) + 1.)
+  first_sum = T.log(T.sum(T.clip(y_pred, 0.001, np.inf)))
+  second_sum = T.log(T.sum(T.clip(y_true, 0.001, np.inf)))
+  return T.mean(T.square(first_log - second_log), axis=-1)+T.square(first_sum - second_sum)
 
 def main():
   train, test = load_set_data(after='RAV', ignore=['PLC', 'FUT'])
