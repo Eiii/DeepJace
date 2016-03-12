@@ -49,7 +49,7 @@ def convert_json_card(json):
   card_types = convert_types(json.get('types', ''))
   if card_types[0]:
     power = convert_numeric(json.get('power'))
-    toughness = convert_numeric(json.get('power'))
+    toughness = convert_numeric(json.get('toughness'))
   else:
     power, toughness = 0,0
   if card_types[2]:
