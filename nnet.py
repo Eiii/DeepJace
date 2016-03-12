@@ -160,6 +160,12 @@ def custom_loss(y_true, y_pred):
   second_sum = T.log(T.sum(T.clip(y_true, 0.001, np.inf)))
   return T.mean(T.square(first_log - second_log), axis=-1)+T.square(first_sum - second_sum)
 
+def cmc_loss(y_true, y_pred):
+  epsilon = 0.001
+  first_sum = T.log(T.sum(T.clip(y_pred, 0.001, np.inf)))
+  second_sum = T.log(T.sum(T.clip(y_true, 0.001, np.inf)))
+  return T.square(first_sum - second_sum)
+
 def main():
   train, test = load_set_data(after='RAV', ignore=['PLC', 'FUT'])
   remove_creatures = lambda x: x.types[0] == 0
