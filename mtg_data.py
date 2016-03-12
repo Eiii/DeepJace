@@ -53,6 +53,7 @@ def load_set_data(test_pct=0.1, data_pct=1, seed=1337, before=None, after=None, 
     legal_sets = sets_after(set_order, after)
   else:
     legal_sets = json_data.keys()
+  legal_set_types = ['core', 'expansion']
 
   card_data = []
   error_cards = 0
@@ -60,6 +61,8 @@ def load_set_data(test_pct=0.1, data_pct=1, seed=1337, before=None, after=None, 
     if set_name not in legal_sets:
       continue
     if ignore is not None and set_name in ignore:
+      continue
+    if str(json_data[set_name]['type']) not in legal_set_types:
       continue
     for j in json_data[set_name]['cards']:
       try:
