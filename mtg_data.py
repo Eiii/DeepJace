@@ -5,6 +5,8 @@ import json
 import random
 import numpy as np
 
+SPELL_TYPES = ['Instant', 'Enchantment', 'Sorcery', 'Enchant']
+
 CARD_DATA = 'data/AllCards.json'
 SET_DATA = 'data/AllSets.json'
 WHITE, BLUE, BLACK, RED, GREEN, COLORLESS = range(6)
@@ -24,9 +26,13 @@ def load_card_data(test_pct=0.1, data_pct=1, seed=1337):
   random.seed(seed)
   with open(CARD_DATA) as f:
     json_data = json.load(f).values()
+  return json_data
   card_data = []
   error_cards = 0
   for j in json_data:
+    if only_types is not None and 'types' in j and \
+       all([str(t) not in only_types for t in j['types']]):
+      continue
     try:
       c = convert_json_card(j)
       card_data.append(c)
@@ -41,7 +47,7 @@ def load_card_data(test_pct=0.1, data_pct=1, seed=1337):
   train_data = card_data[test_amt:]
   return train_data, test_data
 
-def load_set_data(test_pct=0.1, data_pct=1, seed=1337, before=None, after=None, ignore=None):
+def load_set_data(test_pct=0.1, data_pct=1, seed=1337, before=None, after=None, ignore=None, only_types=None):
   random.seed(seed)
   with open(SET_DATA) as f:
     json_data = json.load(f)
@@ -65,6 +71,9 @@ def load_set_data(test_pct=0.1, data_pct=1, seed=1337, before=None, after=None, 
     if str(json_data[set_name]['type']) not in legal_set_types:
       continue
     for j in json_data[set_name]['cards']:
+      if only_types is not None and 'types' in j and \
+         all([str(t) not in only_types for t in j['types']]):
+        continue
       try:
         c = convert_json_card(j, set_name)
         card_data.append(c)
