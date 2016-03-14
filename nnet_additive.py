@@ -13,6 +13,7 @@ from keras.layers.convolutional import AveragePooling1D, Convolution1D, MaxPooli
 import mtg_data
 from sklearn.preprocessing import OneHotEncoder
 import theano
+import pickle
 import theano.tensor as T
 
 VOCAB_SIZE = 2000
@@ -107,7 +108,7 @@ def lstm_mlp(X_train, y_train, X_test, y_test, pretrain_lstm=None, pretrain_mlp=
   model.save_weights("weights_1.model", overwrite=True)
 
 def load_previous_model(X_train, y_train):
-  print "make_predictions"
+  print "load_previous_model"
   model = build_full_model(X_train[1][0].shape)
   print "Compiling..."
   model.compile(loss='msle', optimizer='adam')
@@ -116,6 +117,7 @@ def load_previous_model(X_train, y_train):
 
 def make_predictions(X_test, y_test, y_names):
   print "make_predictions"
+  pred = []
   model = build_full_model(X_test[1][0].shape)
   print "Compiling..."
   model.compile(loss='msle', optimizer='adam')
@@ -126,7 +128,8 @@ def make_predictions(X_test, y_test, y_names):
   with open("output.txt",'w') as f:
     for result, correct, x_test, y_name in zip(results, y_test, X_test[1], y_names):
         print >> f, mana_str(result), "\t", mana_str(correct), "\t", y_name.encode('utf-8').strip()
-  return model
+        pred.append((result.tolist(), correct.tolist()))
+  return pred
 
 def mana_str(cost):
   cost = round_cost(cost)
@@ -164,7 +167,8 @@ def main():
   X_train, y_train, X_test, y_test, y_test_names = prepare_lstm_data(train, test)
   #pre = load_previous_model(X_train, y_train)
   lstm_mlp(X_train, y_train, X_test, y_test, previous_model=None)#,lstm, mlp)
-  make_predictions(X_test, y_test, y_test_names)
+  result = make_predictions(X_test, y_test, y_test_names)
+  pickle.dump(result, open('output.p', 'wb'))
 
 if __name__=="__main__":
     main()
