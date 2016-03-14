@@ -40,9 +40,12 @@ def load_card_data(test_pct=0.1, data_pct=1, seed=1337):
     except Exception as e:
       error_cards += 1
   random.shuffle(card_data)
+  card_data = { card[0] : card for card in card_data }
+  card_data = card_data.values()
   if data_pct < 1:
     amt = int(len(card_data)*data_pct)
     card_data = card_data[:max(amt, 1)]
+
   test_amt = int(len(card_data)*test_pct)
   test_data = card_data[:test_amt]
   train_data = card_data[test_amt:]
@@ -82,6 +85,10 @@ def load_set_data(test_pct=0.1, data_pct=1, seed=1337, before=None, after=None, 
         error_cards += 1
 
   random.shuffle(card_data)
+  print len(card_data)
+  card_data = { card[0] : card for card in card_data }
+  card_data = card_data.values()
+  print len(card_data)
   if data_pct < 1:
     amt = int(len(card_data)*data_pct)
     card_data = card_data[:max(amt, 1)]
@@ -165,10 +172,9 @@ def convert_text(text, name):
 def convert_cost(text_cost):
   cost = np.zeros(2)
   for sym in mana_symbols(text_cost):
-    if sym.isdigit():
+    if sym.isdigit() and cost[1] == 0:
       cost[1] += int(sym)
     else:
-      cost[1] += 1
       cost[0] += 1
   return cost
 
