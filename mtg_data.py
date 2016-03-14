@@ -4,9 +4,10 @@ from collections import namedtuple
 import json
 import random
 import numpy as np
+import re 
 
 SPELL_TYPES = ['Instant', 'Enchantment', 'Sorcery', 'Enchant']
-
+SPELLS_N_PLANESWALKERS = SPELL_TYPES + ["Planeswalker"]
 CARD_DATA = 'data/AllCards.json'
 SET_DATA = 'data/AllSets.json'
 WHITE, BLUE, BLACK, RED, GREEN, COLORLESS = range(6)
@@ -107,7 +108,6 @@ def convert_json_card(json, set_name=None):
   return Card(name, cost, text, card_types, power, toughness, loyalty, colors, set_name)
 
 def convert_colors(colors):
-    
   has_colors = np.zeros(6)
   for color in colors:
     if color == "White":
@@ -142,7 +142,7 @@ def convert_types(card_types):
     elif ct == "artifact":
       ct_vec[5] = 1
     elif ct == "land":
-      ct_vec[6] = 1
+      raise Exception("land sucks")
     elif ct == "tribal":
       ct_vec[7] = 1
     else:
@@ -151,15 +151,30 @@ def convert_types(card_types):
 
 
 def convert_text(text, name):
+  x = "This is a sentence. (once a day)"
+  text = re.sub("[\(.*?\)]", "", text)
   #Replace all occurances of name with %
   text = text.replace(name, '%')
   #Replace all newlines with a space
   text = text.replace('\n', ' ')
   #Convert to lower case
-  text = text.lower()
+  text = text.lower().strip()
+  
   return text
 
 def convert_cost(text_cost):
+  cost = np.zeros(2)
+  for sym in mana_symbols(text_cost):
+    if sym.isdigit():
+      cost[1] += int(sym)
+    else:
+      cost[1] += 1
+      cost[0] += 1
+  return cost
+
+  """
+    oldcost function
+  """
   cost = np.zeros(6)
   for sym in mana_symbols(text_cost):
     if sym == "W":
