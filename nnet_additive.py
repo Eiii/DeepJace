@@ -31,7 +31,7 @@ def build_language_model():
   model.add(Dropout(DROPOUT))
   model.add(LSTM(256, input_shape=(EMBEDDING_SIZE, MAX_LEN), dropout_W=DROPOUT, dropout_U=DROPOUT, return_sequences=False))
   model.add(Dense(256, activation='relu'))
-  model.add(Dense(2, activation='relu', init='he_normal')) 
+  model.add(Dense(2, activation='linear', init='he_normal')) 
   return model
 
 def build_numeric_model(input_shape):
@@ -39,7 +39,7 @@ def build_numeric_model(input_shape):
   model.add(Dense(256, input_shape=input_shape, activation='relu', init='he_normal'))
   model.add(Dropout(DROPOUT))
   model.add(Dense(256, activation= 'relu'))
-  model.add(Dense(2, activation = 'relu', init='he_normal'))
+  model.add(Dense(2, activation = 'linear', init='he_normal'))
   return model
 
 def build_full_model(input_shape, pretrain_language=None, pretrain_numeric=None):
@@ -55,6 +55,7 @@ def build_full_model(input_shape, pretrain_language=None, pretrain_numeric=None)
     numeric_model.layers.pop()
   model = Sequential()
   model.add(Merge([language_model, numeric_model], mode='sum', concat_axis=-1))
+  model.add(Activation('relu'))
   return model
 
 def prepare_lstm_data(train, test, filter_fn=None):
