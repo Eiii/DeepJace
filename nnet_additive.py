@@ -100,7 +100,7 @@ def lstm_mlp(X_train, y_train, X_test, y_test, pretrain_lstm=None, pretrain_mlp=
   print X_train
   model = build_full_model(X_train[1][0].shape, pretrain_lstm, pretrain_mlp)
   print "Compiling..."
-  model.compile(loss=custom_loss, optimizer='rmsprop')
+  model.compile(loss=custom_loss, optimizer='adam')
   if previous_model != None:
     model.load_weights("weights_1.model")
   print "Fitting..."
@@ -120,7 +120,7 @@ def make_predictions(X_test, y_test, y_names):
   pred = []
   model = build_full_model(X_test[1][0].shape)
   print "Compiling..."
-  model.compile(loss='msle', optimizer='adam')
+  model.compile(loss=custom_loss, optimizer='adam')
   model.load_weights("weights_1.model")
 
   print "Predicting..."

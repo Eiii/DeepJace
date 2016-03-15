@@ -30,14 +30,14 @@ def loss(pred, actual):
 def calc_losses(data):
   losses = []
   for d in data:
-    r_pred = round_cost(d[0])
+    r_pred = d[0]
     act = d[1]
     l = loss(r_pred, act)
     losses.append(l)
   return losses
 
 def to_cmc(pred):
-  return int(sum(pred))
+  return int(round(sum(pred)))
 
 def group_by_cmc(data):
   cmc_groups = dict()
