@@ -72,7 +72,7 @@ def prepare_lstm_data(train, test, filter_fn=None):
    
   X_train_text = [ card.tokens for card in train ]
   X_test_text = [ card.tokens for card in test ] 
-  X_train_text = sequence.pad_sequences(X_test_text, MAX_LEN)
+  X_train_text = sequence.pad_sequences(np.asarray(X_train_text), MAX_LEN)
   X_test_text = sequence.pad_sequences(X_test_text, MAX_LEN)
   X_train_numeric, y_train, _ = prepare_numeric(train)
   X_test_numeric, y_test, y_test_names = prepare_numeric(test)
