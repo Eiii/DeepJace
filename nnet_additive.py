@@ -110,7 +110,7 @@ def lstm_mlp(X_train, y_train, X_test, y_test, pretrain_lstm=None, pretrain_mlp=
   if previous_model != None:
     model.load_weights("weights_1.model")
   print "Fitting..."
-  model.fit(X_train, y_train, batch_size=batch_size, nb_epoch=10, validation_split=.1, show_accuracy=True)
+  model.fit(X_train, y_train, batch_size=batch_size, nb_epoch=100, validation_split=.1, show_accuracy=True)
   model.save_weights("weights_1.model", overwrite=True)
 
 def load_previous_model(X_train, y_train):
