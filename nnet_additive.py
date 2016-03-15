@@ -15,6 +15,7 @@ from sklearn.preprocessing import OneHotEncoder
 import theano
 import pickle
 import theano.tensor as T
+from naive_classifier import train_randomforest
 
 VOCAB_SIZE=2000
 MAX_LEN=40
@@ -157,6 +158,8 @@ def main():
   lstm_mlp(X_train, y_train, X_test, y_test, previous_model=None)#,lstm, mlp)
   result = make_predictions(X_test, y_test, y_test_names)
   pickle.dump(result, open('output.p', 'wb'))
+
+  train_randomforest(train, test, n_estimators=20, cpus=4)
 
 if __name__=="__main__":
     main()
