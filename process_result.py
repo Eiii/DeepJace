@@ -128,7 +128,7 @@ def avg_graph():
   weights = [weight_dict[cmc] for cmc in cmcs]
 
   plt.errorbar(cmcs, avgs, yerr=stds, fmt='ro', ms=0)
-  plt.scatter(cmcs, avgs, s=weights)
+  plt.scatter(cmcs, avgs, marker='ro', s=weights)
   plt.plot(ref, ref, 'b-')
   plt.xlim(-0.5, 10.5)
   plt.ylim(-0.5,10.5)
@@ -143,11 +143,13 @@ def avg_graph():
 def loss_graph():
   plt.clf()
   data = loss_by_cmc()
+  weight_dict = weights_by_cmc()
 
   cmcs = data.keys()
   losses = [data[cmc] for cmc in cmcs]
+  weights = [weight_dict[cmc] for cmc in cmcs]
 
-  plt.plot(cmcs, losses, 'ro')
+  plt.scatter(cmcs, losses, marker='ro', s=weights)
   plt.xlim(-0.5, 10.5)
   plt.xticks(range(11))
   plt.grid(axis='x')
