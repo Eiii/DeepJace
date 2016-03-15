@@ -17,8 +17,8 @@ import pickle
 import theano.tensor as T
 
 VOCAB_SIZE = 2000
-MAX_LEN = 40
-DROPOUT = 0.1
+MAX_LEN = 70
+DROPOUT = 0.0
 EMBEDDING_SIZE = 256
 batch_size=256
 FILTER_LENGTH=3
@@ -28,10 +28,9 @@ CMC_PENALTY=5.0
 def build_language_model():
   model = Sequential()
   model.add(Embedding(VOCAB_SIZE+1, EMBEDDING_SIZE, mask_zero=True, input_length=MAX_LEN)) #vocab, size
-  model.add(Dropout(DROPOUT))
-  model.add(LSTM(256, input_shape=(EMBEDDING_SIZE, MAX_LEN), dropout_W=DROPOUT, dropout_U=DROPOUT, return_sequences=False))
-  model.add(Dense(256, activation='relu'))
-  model.add(Dense(2, activation='relu', init='he_normal')) 
+  model.add(LSTM(256, dropout_W=DROPOUT, dropout_U=DROPOUT, return_sequences=False))
+  model.add(Dense(256, activation='relu')) 
+  model.add(Dense(2, activation='linear')) 
   return model
 
 def build_numeric_model(input_shape):
@@ -39,7 +38,7 @@ def build_numeric_model(input_shape):
   model.add(Dense(256, input_shape=input_shape, activation='relu', init='he_normal'))
   model.add(Dropout(DROPOUT))
   model.add(Dense(256, activation= 'relu'))
-  model.add(Dense(2, activation = 'relu', init='he_normal'))
+  model.add(Dense(2, activation = 'linear', init='he_normal'))
   return model
 
 def build_full_model(input_shape, pretrain_language=None, pretrain_numeric=None):
@@ -54,7 +53,10 @@ def build_full_model(input_shape, pretrain_language=None, pretrain_numeric=None)
     numeric_model = pretrain_numeric
     numeric_model.layers.pop()
   model = Sequential()
-  model.add(Merge([language_model, numeric_model], mode='sum', concat_axis=-1))
+  model.add(Merge([language_model, numeric_model], mode='concat', concat_axis=-1))
+  model.add(Dense(256))
+  model.add(Dense(2))
+  model.add(Activation('relu'))
   return model
 
 def prepare_lstm_data(train, test, filter_fn=None):
@@ -71,6 +73,15 @@ def prepare_lstm_data(train, test, filter_fn=None):
   def prepare_text(data, tokenizer):
     corpus = [t[2] for t in data]
     tokens = tokenizer.texts_to_sequences(corpus)
+
+    import operator
+    sorted_x = sorted(tokenizer.word_counts.items(), key=operator.itemgetter(1), reverse=True)
+    fd = open("top100.txt", 'w')
+    
+    for word, num in sorted_x[:100]:
+        print >> fd, word.encode('utf-8').strip()
+    fd.close()
+    
     text = sequence.pad_sequences(tokens, maxlen=MAX_LEN)
     return text
 
@@ -97,14 +108,13 @@ def prepare_lstm_data(train, test, filter_fn=None):
 
 def lstm_mlp(X_train, y_train, X_test, y_test, pretrain_lstm=None, pretrain_mlp=None, previous_model = None):
   print "lstm_mlp"
-  print X_train
   model = build_full_model(X_train[1][0].shape, pretrain_lstm, pretrain_mlp)
   print "Compiling..."
-  model.compile(loss=custom_loss, optimizer='rmsprop')
+  model.compile(loss='msle', optimizer='adam')
   if previous_model != None:
     model.load_weights("weights_1.model")
   print "Fitting..."
-  model.fit(X_train, y_train, batch_size=batch_size, nb_epoch=100, validation_split=.1, show_accuracy=True)
+  model.fit(X_train, y_train, batch_size=batch_size, nb_epoch=10, validation_split=.1, show_accuracy=True)
   model.save_weights("weights_1.model", overwrite=True)
 
 def load_previous_model(X_train, y_train):
@@ -119,6 +129,7 @@ def make_predictions(X_test, y_test, y_names):
   print "make_predictions"
   pred = []
   model = build_full_model(X_test[1][0].shape)
+  #model = build_language_model()
   print "Compiling..."
   model.compile(loss='msle', optimizer='adam')
   model.load_weights("weights_1.model")
@@ -132,7 +143,7 @@ def make_predictions(X_test, y_test, y_names):
   return pred
 
 def mana_str(cost):
-  cost = round_cost(cost)
+  #cost = round_cost(cost)
   color = cost[0]
   cless = cost[1]
   cmc = cost[0]+cost[1]
@@ -165,6 +176,7 @@ def main():
   train, test = load_set_data(after="MRD", ignore=["AVR", "ISD", "DKA"])#, only_types=mtg_data.SPELL_TYPES)
   remove_creatures = lambda x: x.types[0] == 0
   X_train, y_train, X_test, y_test, y_test_names = prepare_lstm_data(train, test)
+   
   #pre = load_previous_model(X_train, y_train)
   lstm_mlp(X_train, y_train, X_test, y_test, previous_model=None)#,lstm, mlp)
   result = make_predictions(X_test, y_test, y_test_names)
