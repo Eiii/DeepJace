@@ -157,8 +157,8 @@ def custom_loss(y_true, y_pred):
   epsilon = 0.001
   first_log = T.log(T.clip(y_pred, 0.001, np.inf) + 1.)
   second_log = T.log(T.clip(y_true, 0.001, np.inf) + 1.)
-  first_sum = T.log(T.sum(T.clip(y_pred, 0.001, np.inf)))
-  second_sum = T.log(T.sum(T.clip(y_true, 0.001, np.inf)))
+  first_sum = T.log(T.sum(T.clip(y_pred, 0.001, np.inf))+1)
+  second_sum = T.log(T.sum(T.clip(y_true, 0.001, np.inf))+1)
   return T.mean(T.square(first_log-second_log), axis=-1) + CMC_PENALTY*T.square(first_sum-second_sum)
 
 def main():
