@@ -29,7 +29,7 @@ def build_language_model():
   model.add(Embedding(VOCAB_SIZE+1, EMBEDDING_SIZE, mask_zero=True, input_length=MAX_LEN)) #vocab, size
   model.add(LSTM(256, input_shape=(EMBEDDING_SIZE, MAX_LEN), dropout_W=DROPOUT, dropout_U=DROPOUT, return_sequences=False))
   model.add(Dense(256, activation='relu'))
-  model.add(Dense(2, activation='linear', init='he_normal')) 
+  model.add(Dense(2, activation='relu', init='he_normal')) 
   return model
 
 def build_numeric_model(input_shape):
@@ -37,7 +37,7 @@ def build_numeric_model(input_shape):
   model.add(Dense(256, input_shape=input_shape, activation='relu', init='he_normal'))
   model.add(Dropout(DROPOUT))
   model.add(Dense(256, activation= 'relu'))
-  model.add(Dense(2, activation = 'linear', init='he_normal'))
+  model.add(Dense(2, activation = 'relu', init='he_normal'))
   return model
 
 def build_full_model(input_shape, pretrain_language=None, pretrain_numeric=None):

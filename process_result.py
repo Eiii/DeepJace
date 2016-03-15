@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 PRED_FILE = 'output.p'
 CMC_PENALTY = 5
 
-def load_data(fname=PRED_FILE):
+def load_data(fname):
   with open(fname) as f:
     data = pickle.load(f)
   return data
@@ -74,8 +74,8 @@ def stddev(l):
 
 ###
 
-def loss_by_cmc(display=False):
-  data = load_data()
+def loss_by_cmc(display=False, fname=PRED_FILE):
+  data = load_data(fname)
   group_data = group_by_cmc(data)
   group_loss = dict()
   for cmc in group_data:
@@ -86,8 +86,8 @@ def loss_by_cmc(display=False):
       print cmc, group_loss[cmc]
   return group_loss
 
-def pred_by_cmc(display=False):
-  data = load_data()
+def pred_by_cmc(display=False, fname=PRED_FILE):
+  data = load_data(fname)
   group_data = group_by_cmc(data)
   group_avg = dict()
   for cmc in group_data:
@@ -98,8 +98,8 @@ def pred_by_cmc(display=False):
       print cmc, group_avg[cmc]
   return group_avg
 
-def weights_by_cmc():
-  data = load_data()
+def weights_by_cmc(fname=PRED_FILE):
+  data = load_data(fname)
   total = 0
   cmc_counts = dict(zip(range(11), [0]*11))
   for d in data:
@@ -127,18 +127,29 @@ def avg_graph():
   stds = [data[cmc][1] for cmc in cmcs]
   weights = [weight_dict[cmc] for cmc in cmcs]
 
-  plt.errorbar(cmcs, avgs, yerr=stds, fmt='ro', ms=0)
-  plt.scatter(cmcs, avgs, marker='ro', s=weights)
   plt.plot(ref, ref, 'b-')
   plt.xlim(-0.5, 10.5)
   plt.ylim(-0.5,10.5)
   plt.xticks(range(11))
   plt.yticks(range(11))
   plt.grid()
-
   plt.xlabel('Actual Mana Cost')
   plt.ylabel('Predicted Mana Cost')
+
+  plt.errorbar(cmcs, avgs, yerr=stds, fmt='ro', ms=0, c='r')
+  plt.scatter(cmcs, avgs, marker='o', s=weights, c='r')
+
   plt.savefig('avg_graph.png')
+
+  data = pred_by_cmc(fname='output.naive.p')
+  cmcs = data.keys()
+  avgs = [data[cmc][0]+0.2 for cmc in cmcs]
+  stds = [data[cmc][1] for cmc in cmcs]
+  plt.errorbar(cmcs, avgs, yerr=stds, fmt='ro', ms=0, c='g')
+  plt.scatter(cmcs, avgs, marker='o', s=weights, c='g')
+
+  plt.savefig('avg_both_graph.png')
+
 
 def loss_graph():
   plt.clf()
@@ -149,7 +160,7 @@ def loss_graph():
   losses = [data[cmc] for cmc in cmcs]
   weights = [weight_dict[cmc] for cmc in cmcs]
 
-  plt.scatter(cmcs, losses, marker='ro', s=weights)
+  plt.scatter(cmcs, losses, marker='o', s=weights)
   plt.xlim(-0.5, 10.5)
   plt.xticks(range(11))
   plt.grid(axis='x')
@@ -161,7 +172,5 @@ def loss_graph():
 ###
 
 if __name__=='__main__':
-  #loss_by_cmc(True)
-  #pred_by_cmc(True)
   avg_graph()
   loss_graph()
