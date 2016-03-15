@@ -20,9 +20,7 @@ VOCAB_SIZE = 2000
 MAX_LEN = 70
 DROPOUT = 0.0
 EMBEDDING_SIZE = 256
-batch_size=256
-FILTER_LENGTH=3
-pool_length=2
+BATCH_SIZE=256
 CMC_PENALTY=5.0
 
 def build_language_model():
