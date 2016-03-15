@@ -16,10 +16,10 @@ import theano
 import pickle
 import theano.tensor as T
 
-VOCAB_SIZE = 2000
-MAX_LEN = 40
-DROPOUT = 0.0
-EMBEDDING_SIZE = 256
+VOCAB_SIZE=2000
+MAX_LEN=40
+DROPOUT=0.5
+EMBEDDING_SIZE=256
 BATCH_SIZE=256
 CMC_PENALTY=5.0
 
@@ -61,7 +61,7 @@ def prepare_lstm_data(train, test, filter_fn=None):
     y = []
     names = []
     for card in data:
-        X.append(np.concatenate((card.types, [card.power, card.toughness, card.loyalty])))
+        X.append(np.concatenate((card.types, card.colors, [card.power, card.toughness, card.loyalty])))
         y.append(card.cost)
         names.append(card.name)
     return np.asarray(X), np.asarray(y), np.asarray(names)

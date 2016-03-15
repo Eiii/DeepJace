@@ -98,21 +98,46 @@ def pred_by_cmc(display=False):
       print cmc, group_avg[cmc]
   return group_avg
 
+def weights_by_cmc():
+  data = load_data()
+  total = 0
+  cmc_counts = dict(zip(range(11), [0]*11))
+  for d in data:
+    _, act = d
+    cmc = to_cmc(act)
+    cmc_counts[cmc] += 1
+    total += 1
+  for cmc in cmc_counts:
+    f = cmc_counts[cmc]
+    cmc_counts[cmc] = 25.0+f*500.0/total
+  return cmc_counts
+
 ###
 
 
 def avg_graph():
   plt.clf()
   data = pred_by_cmc()
+  weight_dict = weights_by_cmc()
 
   ref = [0,10]
 
   cmcs = data.keys()
   avgs = [data[cmc][0] for cmc in cmcs]
   stds = [data[cmc][1] for cmc in cmcs]
+  weights = [weight_dict[cmc] for cmc in cmcs]
 
-  plt.errorbar(cmcs, avgs, yerr=stds, fmt='ro')
+  plt.errorbar(cmcs, avgs, yerr=stds, fmt='ro', ms=0)
+  plt.scatter(cmcs, avgs, s=weights)
   plt.plot(ref, ref, 'b-')
+  plt.xlim(-0.5, 10.5)
+  plt.ylim(-0.5,10.5)
+  plt.xticks(range(11))
+  plt.yticks(range(11))
+  plt.grid()
+
+  plt.xlabel('Actual Mana Cost')
+  plt.ylabel('Predicted Mana Cost')
   plt.savefig('avg_graph.png')
 
 def loss_graph():
@@ -123,6 +148,12 @@ def loss_graph():
   losses = [data[cmc] for cmc in cmcs]
 
   plt.plot(cmcs, losses, 'ro')
+  plt.xlim(-0.5, 10.5)
+  plt.xticks(range(11))
+  plt.grid(axis='x')
+
+  plt.xlabel('Actual Mana Cost')
+  plt.ylabel('Loss')
   plt.savefig('loss_graph.png')
 
 ###
