@@ -4,7 +4,6 @@ from keras.layers.core import TimeDistributedDense,Dense, Dropout, Activation
 from keras.layers.embeddings import  Embedding
 from keras.layers.recurrent import SimpleRNN
 from keras.models import Sequential
-from mtg_data import load_card_data
 import numpy as np
 
 def main():
@@ -115,6 +114,17 @@ class MTGTokenizer(Tokenizer):
                 words.append(word)
             texts.append(words)
         return np.asarray(texts)
+
+    def text_to_sequence(self, text):
+        nb_words = self.nb_words
+        vect = []
+        text = text.split(" ")
+        for w in text:
+            i = self.word_index.get(w)
+            if i is not None:
+                if nb_words and i >= nb_words: pass
+                else: vect.append(i)
+        return np.asarray(vect)
 
     def texts_to_sequences_generator(self, texts):
         '''

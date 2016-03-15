@@ -1,5 +1,5 @@
 #!/usr/bin/env python2
-
+from w2v_mtg import MTGTokenizer
 from collections import namedtuple
 import json
 import random
@@ -12,7 +12,7 @@ CARD_DATA = 'data/AllCards.json'
 SET_DATA = 'data/AllSets.json'
 WHITE, BLUE, BLACK, RED, GREEN, COLORLESS = range(6)
 
-Card = namedtuple('Card', ['name', 'cost', 'text', 'types', 'power', 'toughness', 'loyalty', 'colors', 'set'])
+Card = namedtuple('Card', ['name', 'cost', 'text', 'types', 'power', 'toughness', 'loyalty', 'colors', 'set', 'tokens'])
 
 """
 load_card_data
@@ -23,7 +23,7 @@ Returns [training data], [testing data]
 
 X - cost spells do not function. * cost power/toughness creatures do not function.
 """
-def load_card_data(test_pct=0.1, data_pct=1, seed=1337):
+def load_card_data(test_pct=0.1, data_pct=1, seed=1337, vocab_size=2000):
   random.seed(seed)
   with open(CARD_DATA) as f:
     json_data = json.load(f).values()
@@ -51,8 +51,9 @@ def load_card_data(test_pct=0.1, data_pct=1, seed=1337):
   train_data = card_data[test_amt:]
   return train_data, test_data
 
-def load_set_data(test_pct=0.1, data_pct=1, seed=1337, before=None, after=None, ignore=None, only_types=None):
+def load_set_data(test_pct=0.1, data_pct=1, seed=1337, before=None, after=None, ignore=None, only_types=None, as_dictionary=False,vocab_size=2000):
   random.seed(seed)
+
   with open(SET_DATA) as f:
     json_data = json.load(f)
 
@@ -67,6 +68,21 @@ def load_set_data(test_pct=0.1, data_pct=1, seed=1337, before=None, after=None, 
 
   card_data = []
   error_cards = 0
+  corpus = []
+  """ load corpus """
+  for set_name in json_data.keys():
+    for card in json_data[set_name]['cards']:
+      try:
+          name = card['name']
+          corpus.append(convert_text(card['text'], name))
+      except Exception as e:
+          ''' no text '''
+          pass
+  tokenizer = MTGTokenizer(nb_words=vocab_size, filters=None, lower=True, split=" ")
+  tokenizer.fit_on_texts(corpus)
+  save_top_n(tokenizer, 100)
+  
+  """ tuples makin me loop twice -- load and filter card data """          
   for set_name in json_data.keys():
     if set_name not in legal_sets:
       continue
@@ -79,25 +95,28 @@ def load_set_data(test_pct=0.1, data_pct=1, seed=1337, before=None, after=None, 
          all([str(t) not in only_types for t in j['types']]):
         continue
       try:
-        c = convert_json_card(j, set_name)
+        c = convert_json_card(j, set_name, tokenizer)
         card_data.append(c)
       except Exception as e:
         error_cards += 1
 
   random.shuffle(card_data)
-  print len(card_data)
   card_data = { card[0] : card for card in card_data }
+  if as_dictionary:
+    return card_data
+
   card_data = card_data.values()
-  print len(card_data)
   if data_pct < 1:
     amt = int(len(card_data)*data_pct)
     card_data = card_data[:max(amt, 1)]
+
   test_amt = int(len(card_data)*test_pct)
   test_data = card_data[:test_amt]
   train_data = card_data[test_amt:]
+
   return train_data, test_data
 
-def convert_json_card(json, set_name=None):
+def convert_json_card(json, set_name=None, tokenizer=None):
   name = json['name']
   cost = convert_cost(json.get('manaCost', ''))
   text = convert_text(json.get('text', ''), name)
@@ -112,7 +131,11 @@ def convert_json_card(json, set_name=None):
     loyalty = convert_numeric(json.get('loyalty'))
   else:
     loyalty = 0
-  return Card(name, cost, text, card_types, power, toughness, loyalty, colors, set_name)
+  try:
+    tokens = tokenizer.text_to_sequence(text)
+  except Exception as e:
+    tokens = []
+  return Card(name, cost, text, card_types, power, toughness, loyalty, colors, set_name, tokens)
 
 def convert_colors(colors):
   has_colors = np.zeros(6)
@@ -224,3 +247,10 @@ def sets_after(set_order, set_name):
   idx = set_order.index(set_name)
   return set_order[idx:]
 
+def save_top_n(tokenizer, n=100):
+  import operator
+  sorted_x = sorted(tokenizer.word_counts.items(), key=operator.itemgetter(1), reverse=True)
+  fd = open("top" + str(n) + ".txt", 'w')
+  for word, num in sorted_x[:n]:
+      print >> fd, word.encode('utf-8').strip()
+  fd.close()

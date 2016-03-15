@@ -17,7 +17,7 @@ import pickle
 import theano.tensor as T
 
 VOCAB_SIZE = 2000
-MAX_LEN = 70
+MAX_LEN = 40
 DROPOUT = 0.0
 EMBEDDING_SIZE = 256
 BATCH_SIZE=256
@@ -66,34 +66,14 @@ def prepare_lstm_data(train, test, filter_fn=None):
         names.append(card.name)
     return np.asarray(X), np.asarray(y), np.asarray(names)
 
-  def prepare_text(data, tokenizer):
-    corpus = [t[2] for t in data]
-    tokens = tokenizer.texts_to_sequences(corpus)
-
-    import operator
-    sorted_x = sorted(tokenizer.word_counts.items(), key=operator.itemgetter(1), reverse=True)
-    fd = open("top100.txt", 'w')
-    
-    for word, num in sorted_x[:100]:
-        print >> fd, word.encode('utf-8').strip()
-    fd.close()
-    
-    text = sequence.pad_sequences(tokens, maxlen=MAX_LEN)
-    return text
-
-  def create_trained_tokenizer(data):
-    tokenizer = MTGTokenizer(nb_words=VOCAB_SIZE, filters=None, lower=True, split=" ")
-    corpus = [t[2] for t in data]
-    tokenizer.fit_on_texts(corpus)
-    return tokenizer
-
   if filter_fn:
     train = filter(filter_fn, train)
     test = filter(filter_fn, test)
-
-  tokenizer = create_trained_tokenizer(train)
-  X_train_text = prepare_text(train, tokenizer)
-  X_test_text = prepare_text(test, tokenizer)
+   
+  X_train_text = [ card.tokens for card in train ]
+  X_test_text = [ card.tokens for card in test ] 
+  X_train_text = sequence.pad_sequences(X_test_text, MAX_LEN)
+  X_test_text = sequence.pad_sequences(X_test_text, MAX_LEN)
   X_train_numeric, y_train, _ = prepare_numeric(train)
   X_test_numeric, y_test, y_test_names = prepare_numeric(test)
 
