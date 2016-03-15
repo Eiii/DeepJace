@@ -12,7 +12,7 @@ CARD_DATA = 'data/AllCards.json'
 SET_DATA = 'data/AllSets.json'
 WHITE, BLUE, BLACK, RED, GREEN, COLORLESS = range(6)
 
-Card = namedtuple('Card', ['name', 'cost', 'text', 'types', 'power', 'toughness', 'loyalty', 'set'])
+Card = namedtuple('Card', ['name', 'cost', 'text', 'types', 'power', 'toughness', 'loyalty', 'colors', 'set'])
 
 """
 load_card_data
@@ -23,7 +23,7 @@ Returns [training data], [testing data]
 
 X - cost spells do not function. * cost power/toughness creatures do not function.
 """
-def load_card_data(test_pct=0.1, data_pct=1, seed=1337, as_dictionary = False):
+def load_card_data(test_pct=0.1, data_pct=1, seed=1337):
   random.seed(seed)
   with open(CARD_DATA) as f:
     json_data = json.load(f).values()
@@ -51,7 +51,7 @@ def load_card_data(test_pct=0.1, data_pct=1, seed=1337, as_dictionary = False):
   train_data = card_data[test_amt:]
   return train_data, test_data
 
-def load_set_data(test_pct=0.1, data_pct=1, seed=1337, before=None, after=None, ignore=None, only_types=None, as_dictionary=False):
+def load_set_data(test_pct=0.1, data_pct=1, seed=1337, before=None, after=None, ignore=None, only_types=None):
   random.seed(seed)
   with open(SET_DATA) as f:
     json_data = json.load(f)
@@ -85,8 +85,6 @@ def load_set_data(test_pct=0.1, data_pct=1, seed=1337, before=None, after=None, 
         error_cards += 1
 
   random.shuffle(card_data)
-  if as_dictionary:
-    return { card[0] : card for card in card_data }
   print len(card_data)
   card_data = { card[0] : card for card in card_data }
   card_data = card_data.values()
@@ -103,6 +101,7 @@ def convert_json_card(json, set_name=None):
   name = json['name']
   cost = convert_cost(json.get('manaCost', ''))
   text = convert_text(json.get('text', ''), name)
+  colors = convert_colors(json.get('colors', ''))
   card_types = convert_types(json.get('types', ''))
   if card_types[0]:
     power = convert_numeric(json.get('power'))
@@ -113,8 +112,22 @@ def convert_json_card(json, set_name=None):
     loyalty = convert_numeric(json.get('loyalty'))
   else:
     loyalty = 0
-  return Card(name, cost, text, card_types, power, toughness, loyalty, set_name)
+  return Card(name, cost, text, card_types, power, toughness, loyalty, colors, set_name)
 
+def convert_colors(colors):
+  has_colors = np.zeros(6)
+  for color in colors:
+    if color == "White":
+      has_colors[WHITE] = 1
+    elif color == "Blue":
+      has_colors[BLUE] = 1
+    elif color == "Black":
+      has_colors[BLACK] = 1
+    elif color == "Red":
+      has_colors[RED] = 1
+    elif color == "Green":
+      has_colors[GREEN] = 1
+  return has_colors
 
 def convert_numeric(val):
   return int(val)
