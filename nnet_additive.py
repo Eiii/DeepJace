@@ -28,9 +28,9 @@ CMC_PENALTY=5.0
 def build_language_model():
   model = Sequential()
   model.add(Embedding(VOCAB_SIZE+1, EMBEDDING_SIZE, mask_zero=True, input_length=MAX_LEN)) #vocab, size
-  model.add(LSTM(256, dropout_W=DROPOUT, dropout_U=DROPOUT, return_sequences=False))
-  model.add(Dense(256, activation='relu')) 
-  model.add(Dense(2, activation='linear')) 
+  model.add(LSTM(256, input_shape=(EMBEDDING_SIZE, MAX_LEN), dropout_W=DROPOUT, dropout_U=DROPOUT, return_sequences=False))
+  model.add(Dense(256, activation='relu'))
+  model.add(Dense(2, activation='linear', init='he_normal')) 
   return model
 
 def build_numeric_model(input_shape):
@@ -53,9 +53,7 @@ def build_full_model(input_shape, pretrain_language=None, pretrain_numeric=None)
     numeric_model = pretrain_numeric
     numeric_model.layers.pop()
   model = Sequential()
-  model.add(Merge([language_model, numeric_model], mode='concat', concat_axis=-1))
-  model.add(Dense(256))
-  model.add(Dense(2))
+  model.add(Merge([language_model, numeric_model], mode='sum', concat_axis=-1))
   model.add(Activation('relu'))
   return model
 
@@ -110,7 +108,7 @@ def lstm_mlp(X_train, y_train, X_test, y_test, pretrain_lstm=None, pretrain_mlp=
   print "lstm_mlp"
   model = build_full_model(X_train[1][0].shape, pretrain_lstm, pretrain_mlp)
   print "Compiling..."
-  model.compile(loss='msle', optimizer='adam')
+  model.compile(loss=custom_loss, optimizer='adam')
   if previous_model != None:
     model.load_weights("weights_1.model")
   print "Fitting..."
@@ -121,7 +119,7 @@ def load_previous_model(X_train, y_train):
   print "load_previous_model"
   model = build_full_model(X_train[1][0].shape)
   print "Compiling..."
-  model.compile(loss='msle', optimizer='adam')
+  model.compile(loss=custom_loss, optimizer='adam')
   model.load_weights("weights_1.model")
   return model
 
@@ -131,7 +129,7 @@ def make_predictions(X_test, y_test, y_names):
   model = build_full_model(X_test[1][0].shape)
   #model = build_language_model()
   print "Compiling..."
-  model.compile(loss='msle', optimizer='adam')
+  model.compile(loss=custom_loss, optimizer='adam')
   model.load_weights("weights_1.model")
 
   print "Predicting..."

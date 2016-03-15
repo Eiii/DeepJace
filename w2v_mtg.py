@@ -4,19 +4,23 @@ from keras.layers.core import TimeDistributedDense,Dense, Dropout, Activation
 from keras.layers.embeddings import  Embedding
 from keras.layers.recurrent import SimpleRNN
 from keras.models import Sequential
+from mtg_data import load_card_data
 import numpy as np
 
 def main():
-    vocabulary_size = 10000
-    #keep commas and colons
-    corpus = [line.strip().lower().replace("(", "").replace(")", "").replace(".", "").split() for line in open('corpus.txt', 'r')]
-    tokenizer = MTGTokenizer(nb_words=vocabulary_size, filters=None, lower=True, split=" ")
-    tokenizer.fit_on_texts(corpus)
-    tokens = tokenizer.texts_to_sequences(corpus)
-
+    vocabulary_size = 2000
     X_train = []
     y_train = []
-    for token in tokens:
+
+    train, test = load_card_data()
+    corpus = [t[2] for t in train]
+
+    tokenizer = MTGTokenizer(nb_words=vocabulary_size, filters=None, lower=True, split=" ")
+    tokenizer.fit_on_texts(corpus)
+    train_tokens = tokenizer.texts_to_sequences(corpus)
+
+
+    for token in train_tokens:
         couples, labels = skipgrams(token, vocabulary_size) 
             
         X_train += couples
@@ -34,8 +38,11 @@ def main():
     model.add(SimpleRNN(128, return_sequences=False))
     model.add(Dense(1, activation="sigmoid"))
     model.compile(optimizer="Adam", loss="binary_crossentropy")
-    model.load_weights("mtgW2V.mdl")
-    embedding_weights = model.layers[0].get_weights()[0]
+#    model.load_weights("mtgW2V.mdl")
+#    embedding_weights = model.layers[0].get_weights()[0]
+    model.fit(X_train, y_train, nb_epoch=5, batch_size=1024)
+    model.save_weights("mtgW2V.mdl")
+    return
     
     from scipy.spatial.distance import cosine
     embedding_dict = tokenizer.word_index
@@ -67,21 +74,17 @@ def main():
             pass
     
     
-#    model.fit(X_train, y_train, nb_epoch=2, batch_size=1024)
-    
-
-#    model.save_weights("mtgW2V.mdl")
     
 from keras.preprocessing.text import Tokenizer
 class MTGTokenizer(Tokenizer):
     def __init__(self, *args, **kwargs):
         super(MTGTokenizer, self).__init__(*args, **kwargs)
-
+    
     def fit_on_texts(self, texts):
         self.document_count = 0
         for text in texts:
             self.document_count += 1
-            seq = text
+            seq = text.split(" ")
             for w in seq:
                 if w in self.word_counts:
                     self.word_counts[w] += 1
@@ -97,9 +100,21 @@ class MTGTokenizer(Tokenizer):
         wcounts.sort(key=lambda x: x[1], reverse=True)
         sorted_voc = [wc[0] for wc in wcounts]
         self.word_index = dict(list(zip(sorted_voc, list(range(1, len(sorted_voc) + 1)))))
+        self.index_word = {self.word_index[key]: key for key in self.word_index}
         self.index_docs = {}
         for w, c in list(self.word_docs.items()):
             self.index_docs[self.word_index[w]] = c
+
+    def sequences_to_text(self, sequences):
+        texts = []
+        for sequence in sequences:
+            words = []
+            for tok in sequence:
+                if tok in self.index_word:
+                    word = self.index_word[tok]
+                words.append(word)
+            texts.append(words)
+        return np.asarray(texts)
 
     def texts_to_sequences_generator(self, texts):
         '''
@@ -120,7 +135,7 @@ class MTGTokenizer(Tokenizer):
                         pass
                     else:
                         vect.append(i)
-            yield vect
+            yield np.asarray(vect)
 
 if __name__ == "__main__":
     main()

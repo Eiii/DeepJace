@@ -13,41 +13,36 @@ from scipy.sparse import csc_matrix
 from sklearn.preprocessing import OneHotEncoder
 import theano
 import theano.tensor as T
+import pickle
 
 VOCAB_SIZE = 2000
+EMBEDDING_SIZE = 256
 MAX_LEN = 40
 DROPOUT = 0.7
 
 def build_language_model():
   model = Sequential()
-  model.add(Embedding(VOCAB_SIZE+1, 512, mask_zero=True, input_length=MAX_LEN)) #vocab, size
-  model.add(LSTM(64))
+  model.add(Embedding(VOCAB_SIZE+1, EMBEDDING_SIZE, mask_zero=True, input_length=MAX_LEN)) #vocab, size
+  model.add(LSTM(256))
   model.add(Dropout(DROPOUT))
+  model.add(Dense(256, activation='relu'))
   return model
 
 def build_numeric_model(input_shape):
   model = Sequential()
-  model.add(Dense(64, input_shape=input_shape, activation='relu'))
+  model.add(Dense(256, input_shape=input_shape, activation='relu'))
   model.add(Dropout(DROPOUT))
+  model.add(Dense(256, activation= 'relu'))
   return model
 
-def build_full_model(input_shape, pretrain_language=None):
-  if pretrain_language is None:
-    language_model = build_language_model()
-  else:
-    language_model = pretrain_language
-    language_model.layers.pop()
+def build_full_model(input_shape):
+  language_model = build_language_model()
   numeric_model = build_numeric_model(input_shape)
   model = Sequential()
   model.add(Merge([language_model, numeric_model], mode='concat', concat_axis=-1))
-  model.add(Dense(128, activation='relu'))
+  model.add(Dense(256, activation='relu'))
   model.add(Dropout(DROPOUT))
-  model.add(Dense(6, activation='relu'))
-  return model
-
-def build_pretrain_model():
-  model = build_language_model()
-  model.add(Dense(1, activation='relu'))
+  model.add(Dense(2, activation='relu'))
   return model
 
 def prepare_lstm(train, test, filter_fn=None):
@@ -56,7 +51,7 @@ def prepare_lstm(train, test, filter_fn=None):
     y = []
     names = []
     for card in data:
-        X.append(np.concatenate((card.types, [card.power, card.toughness, card.loyalty], card.colors)))
+        X.append(np.concatenate((card.types, [card.power, card.toughness, card.loyalty])))
         y.append(card.cost)
         names.append(card.name)
     return X, y, names
@@ -88,33 +83,18 @@ def prepare_lstm(train, test, filter_fn=None):
   X_test = map(np.asarray, [X_test_text, X_test_numeric])
   return X_train, np.asarray(y_train), X_test, np.asarray(y_test), y_test_names
 
-def lstm_mlp(X_train, y_train, X_test, y_test, pretrain=None):
+def lstm_mlp(X_train, y_train, X_test, y_test):
   print "lstm_mlp"
-  model = build_full_model(X_train[1][0].shape, pretrain)
+  model = build_full_model(X_train[1][0].shape)
   print "Compiling..."
   model.compile(loss=custom_loss, optimizer='adam')
   print "Fitting..."
-  model.fit(X_train, y_train, batch_size=256, nb_epoch=250, validation_split=.1)
+  model.fit(X_train, y_train, batch_size=256, nb_epoch=100, validation_split=.1)
   model.save_weights("weights_1.model", overwrite=True)
-
-def lstm_pretrain(X_train, y_train):
-  print "lstm_pretrain"
-  y_train_sum = np.sum(y_train, axis=1)
-  y_test_sum = np.sum(y_train, axis=1)
-  model = build_pretrain_model()
-  print "Compiling..."
-  model.compile(loss=custom_loss, optimizer='adam')
-  model.fit(X_train, y_train_sum, batch_size=256, nb_epoch=50, validation_split=0.1)
-  model.save_weights("pretrain_1.model", overwrite=True)
-  return model
-
-def load_pretrain():
-  model = build_pretrain_model()
-  model.load_weights("pretrain_1.model")
-  return model
 
 def make_predictions(X_test, y_test, y_names):
   print "make_predictions"
+  pred = []
   model = build_full_model(X_test[1][0].shape)
   print "Compiling..."
   model.compile(loss=custom_loss, optimizer='adam')
@@ -125,17 +105,15 @@ def make_predictions(X_test, y_test, y_names):
   with open("output.txt",'w') as f:
     for result, correct, x_test, y_name in zip(results, y_test, X_test[1], y_names):
         print >> f, mana_str(result), "\t", mana_str(correct), "\t", y_name.encode('utf-8').strip()
-  return model
+        pred.append((result.tolist(), correct.tolist()))
+  return pred
 
 def mana_str(cost):
   cost = round_cost(cost)
-  cost_str  = "W"*cost[0]
-  cost_str += "U"*cost[1]
-  cost_str += "B"*cost[2]
-  cost_str += "R"*cost[3]
-  cost_str += "G"*cost[4]
-  if cost[5] > 0:
-    cost_str = str(cost[5])+cost_str
+  color = cost[0]
+  cless = cost[1]
+  cmc = cost[0]+cost[1]
+  cost_str = "%s %s %s" % (color, cless, cmc)
   return cost_str
 
 def round_cost(cost):
@@ -154,27 +132,19 @@ def filter_data(X, y, filter_fn):
 
 def custom_loss(y_true, y_pred):
   epsilon = 0.001
-  first_log = T.log(T.clip(y_pred, 0.001, np.inf) + 1.)
-  second_log = T.log(T.clip(y_true, 0.001, np.inf) + 1.)
-  first_sum = T.log(T.sum(T.clip(y_pred, 0.001, np.inf)))
-  second_sum = T.log(T.sum(T.clip(y_true, 0.001, np.inf)))
-  return T.mean(T.square(first_log - second_log), axis=-1)+T.square(first_sum - second_sum)
-
-def cmc_loss(y_true, y_pred):
-  epsilon = 0.001
-  first_sum = T.log(T.sum(T.clip(y_pred, 0.001, np.inf)))
-  second_sum = T.log(T.sum(T.clip(y_true, 0.001, np.inf)))
-  return T.square(first_sum - second_sum)
+  first_log = T.log(T.clip(y_pred, 0.001, np.inf)+1.0)
+  second_log = T.log(T.clip(y_true, 0.001, np.inf)+1.0)
+  first_sum = T.log(T.sum(T.clip(y_pred, 0.001, np.inf))+1.0)
+  second_sum = T.log(T.sum(T.clip(y_true, 0.001, np.inf))+1.0)
+  return T.mean(T.square(first_log-second_log), axis=-1)+T.square(first_sum-second_sum)
 
 def main():
   train, test = load_set_data(after='RAV', ignore=['PLC', 'FUT'])
   remove_creatures = lambda x: x.types[0] == 0
-  #X_pretrain, y_pretrain, _, _, _ = prepare_lstm(train, test, remove_creatures)
-  #pretrain = lstm_pretrain(X_pretrain[0], y_pretrain)
-  #pretrain = load_pretrain()
   X_train, y_train, X_test, y_test, y_test_names = prepare_lstm(train, test)
-  lstm_mlp(X_train, y_train, X_test, y_test)
-  make_predictions(X_test, y_test, y_test_names)
+  #lstm_mlp(X_train, y_train, X_test, y_test)
+  result = make_predictions(X_test, y_test, y_test_names)
+  pickle.dump(result, open('output.p', 'wb'))
 
 if __name__=="__main__":
     main()
