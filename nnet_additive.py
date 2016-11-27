@@ -32,6 +32,8 @@ def build_language_model():
   model.add(Dense(2, activation='relu', init='he_normal')) 
   return model
 
+
+
 def build_numeric_model(input_shape):
   model = Sequential()
   model.add(Dense(256, input_shape=input_shape, activation='relu', init='he_normal'))
@@ -131,11 +133,9 @@ def round_cost(cost):
   return map(int,map(round, cost))
 
 def filter_data(X, y, filter_fn):
-    X_out = []
-    y_out = []
+    X_out, y_out  = [], []
     for xi, yi in zip(X, y):
-        print xi
-        print yi
+        print xi, "\n", yi
         if filter_fn(xi):
             X_out.append(xi)
             y_out.append(yi)
@@ -158,7 +158,6 @@ def main():
   lstm_mlp(X_train, y_train, X_test, y_test, previous_model=None)#,lstm, mlp)
   result = make_predictions(X_test, y_test, y_test_names)
   pickle.dump(result, open('output.p', 'wb'))
-
   train_randomforest(train, test, n_estimators=20, cpus=4)
 
 if __name__=="__main__":

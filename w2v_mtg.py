@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from keras.preprocessing.sequence import skipgrams, make_sampling_table
-from keras.layers.core import TimeDistributedDense,Dense, Dropout, Activation
+from keras.layers.core import TimeDistributedDense, Dense, Dropout, Activation
 from keras.layers.embeddings import  Embedding
 from keras.layers.recurrent import SimpleRNN
 from keras.models import Sequential
